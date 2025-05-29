@@ -1,6 +1,28 @@
 <?php
-session_start();
-require_once 'config/database.php';
+// Set custom session save path to avoid Windows permission issues
+$sessionPath = realpath(__DIR__ . '/../sessions');
+if (!$sessionPath || !is_dir($sessionPath)) {
+    $sessionPath = __DIR__ . '/../sessions';
+    if (!is_dir($sessionPath)) {
+        mkdir($sessionPath, 0777, true);
+    }
+    chmod($sessionPath, 0777);
+}
+
+// Start session only if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    // Set session configuration before starting session
+    ini_set('session.save_path', $sessionPath);
+    ini_set('session.use_cookies', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.gc_probability', 1);
+    ini_set('session.gc_divisor', 100);
+    ini_set('session.gc_maxlifetime', 1440);
+    
+    session_start();
+}
+require_once __DIR__ . '/../config/database.php';
 
 class Cart {
     private $db;
@@ -77,26 +99,27 @@ class Product {
     public function __construct() {
         $this->db = new Database();
     }
-    
-    public function getAllProducts($limit = null, $offset = 0) {
+      public function getAllProducts($limit = null, $offset = 0) {
         $sql = "SELECT p.*, c.name as category_name FROM products p 
                 LEFT JOIN categories c ON p.category_id = c.id 
                 ORDER BY p.created_at DESC";
         
         if ($limit) {
+            $limit = (int)$limit; // Ensure it's an integer for security
+            $offset = (int)$offset;
             $sql .= " LIMIT $limit OFFSET $offset";
         }
         
         return $this->db->fetchAll($sql);
     }
-    
-    public function getFeaturedProducts($limit = 8) {
+      public function getFeaturedProducts($limit = 8) {
+        $limit = (int)$limit; // Ensure it's an integer for security
         $sql = "SELECT p.*, c.name as category_name FROM products p 
                 LEFT JOIN categories c ON p.category_id = c.id 
                 WHERE p.featured = 1 
-                ORDER BY p.created_at DESC LIMIT ?";
+                ORDER BY p.created_at DESC LIMIT $limit";
         
-        return $this->db->fetchAll($sql, [$limit]);
+        return $this->db->fetchAll($sql);
     }
     
     public function getProductById($id) {
@@ -106,14 +129,14 @@ class Product {
         
         return $this->db->fetch($sql, [$id]);
     }
-    
-    public function getProductsByCategory($categoryId, $limit = null) {
+      public function getProductsByCategory($categoryId, $limit = null) {
         $sql = "SELECT p.*, c.name as category_name FROM products p 
                 LEFT JOIN categories c ON p.category_id = c.id 
                 WHERE p.category_id = ? 
                 ORDER BY p.created_at DESC";
         
         if ($limit) {
+            $limit = (int)$limit; // Ensure it's an integer for security
             $sql .= " LIMIT $limit";
         }
         
@@ -166,8 +189,7 @@ class Order {
             foreach ($cartItems as $item) {
                 $total += $item['total'];
             }
-            
-            $this->db->query($sql, [
+              $this->db->execute($sql, [
                 $customerData['name'],
                 $customerData['email'],
                 $customerData['phone'],
@@ -179,9 +201,8 @@ class Order {
             
             // Insert order items
             $sql = "INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)";
-            
-            foreach ($cartItems as $item) {
-                $this->db->query($sql, [
+              foreach ($cartItems as $item) {
+                $this->db->execute($sql, [
                     $orderId,
                     $item['id'],
                     $item['quantity'],

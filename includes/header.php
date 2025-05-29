@@ -1,6 +1,5 @@
 <?php
-require_once 'config/config.php';
-require_once 'includes/classes.php';
+require_once __DIR__ . '/../bootstrap.php';
 
 $companyInfo = new CompanyInfo();
 $company = $companyInfo->getCompanyInfo();

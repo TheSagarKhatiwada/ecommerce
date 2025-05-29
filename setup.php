@@ -1,5 +1,5 @@
 <?php
-require_once 'config/database.php';
+require_once __DIR__ . '/bootstrap.php';
 
 echo "Setting up eCommerce Database...\n\n";
 
@@ -60,12 +60,13 @@ try {
             }
         }
     }
-    
-    echo "\n✅ Database setup completed successfully!\n";
+      echo "\n✅ Database setup completed successfully!\n";
     echo "\nYou can now:\n";
-    echo "1. Start your web server\n";
-    echo "2. Navigate to your eCommerce site\n";
-    echo "3. Browse products and test the shopping cart\n\n";
+    echo "1. Start your web server (if not already running)\n";
+    echo "2. Navigate to your eCommerce site at: http://localhost/ecommerce/\n";
+    echo "3. Or use the web installer at: http://localhost/ecommerce/install.php\n";
+    echo "4. Browse products and test the shopping cart\n";
+    echo "5. Access admin panel at: http://localhost/ecommerce/admin.php (password: admin123)\n\n";
     
     echo "Default company: TechStore Pro\n";
     echo "Sample categories: Electronics, Clothing, Books, Home & Garden, Sports\n";

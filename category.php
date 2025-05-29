@@ -1,5 +1,5 @@
 <?php
-require_once 'includes/classes.php';
+require_once __DIR__ . '/bootstrap.php';
 
 $productModel = new Product();
 $categoryModel = new Category();

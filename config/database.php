@@ -1,16 +1,16 @@
 <?php
 // Database configuration
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_USER', 'rootUser');
+define('DB_PASS', 'Sagar');
 define('DB_NAME', 'ecommerce_db');
 
 class Database {
     private $connection;
+    private static $instance = null;
     
     public function __construct() {
         try {
-            // Try MySQL first
             $this->connection = new PDO(
                 "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME,
                 DB_USER,
@@ -21,166 +21,155 @@ class Database {
                 ]
             );
         } catch (PDOException $e) {
-            // Fallback to SQLite for development
-            try {
-                $sqliteFile = __DIR__ . '/../database/ecommerce.db';
-                $this->connection = new PDO(
-                    "sqlite:" . $sqliteFile,
-                    null,
-                    null,
-                    [
-                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-                    ]
-                );
-                
-                // Create tables if they don't exist
-                $this->createTables();
-                
-            } catch (PDOException $e2) {
-                throw new Exception("Database connection failed: " . $e2->getMessage());
-            }
+            throw new Exception("Database connection failed: " . $e->getMessage());
         }
     }
     
-    private function createTables() {
-        // Create tables for SQLite
-        $tables = [
-            "CREATE TABLE IF NOT EXISTS categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name VARCHAR(100) NOT NULL,
-                description TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )",
-            
-            "CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name VARCHAR(255) NOT NULL,
-                description TEXT,
-                price DECIMAL(10,2) NOT NULL,
-                category_id INTEGER,
-                image VARCHAR(255),
-                stock_quantity INTEGER DEFAULT 0,
-                featured BOOLEAN DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (category_id) REFERENCES categories(id)
-            )",
-            
-            "CREATE TABLE IF NOT EXISTS orders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                customer_name VARCHAR(255) NOT NULL,
-                customer_email VARCHAR(255) NOT NULL,
-                customer_phone VARCHAR(20),
-                shipping_address TEXT NOT NULL,
-                total_amount DECIMAL(10,2) NOT NULL,
-                status VARCHAR(50) DEFAULT 'pending',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )",
-            
-            "CREATE TABLE IF NOT EXISTS order_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                order_id INTEGER NOT NULL,
-                product_id INTEGER NOT NULL,
-                quantity INTEGER NOT NULL,
-                price DECIMAL(10,2) NOT NULL,
-                FOREIGN KEY (order_id) REFERENCES orders(id),
-                FOREIGN KEY (product_id) REFERENCES products(id)
-            )",
-            
-            "CREATE TABLE IF NOT EXISTS company_info (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name VARCHAR(255) NOT NULL,
-                address TEXT,
-                phone VARCHAR(20),
-                email VARCHAR(255),
-                website VARCHAR(255),
-                about TEXT,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )"
-        ];
-        
-        foreach ($tables as $sql) {
-            $this->connection->exec($sql);
+    public static function getInstance() {
+        if (self::$instance === null) {
+            self::$instance = new Database();
         }
-        
-        // Insert sample data if tables are empty
-        $this->insertSampleData();
-    }
-    
-    private function insertSampleData() {
-        // Check if data already exists
-        $count = $this->fetch("SELECT COUNT(*) as count FROM categories");
-        if ($count['count'] > 0) {
-            return; // Data already exists
-        }
-        
-        // Insert categories
-        $categories = [
-            ['Smartphones', 'Latest smartphones and mobile devices'],
-            ['Laptops', 'High-performance laptops and notebooks'],
-            ['Tablets', 'Tablets and e-readers'],
-            ['Accessories', 'Tech accessories and peripherals'],
-            ['Gaming', 'Gaming devices and accessories']
-        ];
-        
-        foreach ($categories as $cat) {
-            $this->query("INSERT INTO categories (name, description) VALUES (?, ?)", $cat);
-        }
-        
-        // Insert products
-        $products = [
-            ['iPhone 14 Pro', 'Latest iPhone with advanced camera system', 999.99, 1, 'iphone14pro.jpg', 50, 1],
-            ['Samsung Galaxy S23', 'Powerful Android smartphone', 799.99, 1, 'galaxys23.jpg', 30, 1],
-            ['MacBook Pro 16"', 'Professional laptop for creators', 2499.99, 2, 'macbookpro.jpg', 20, 1],
-            ['Dell XPS 13', 'Ultra-portable Windows laptop', 1299.99, 2, 'dellxps13.jpg', 25, 1],
-            ['iPad Pro 12.9"', 'Professional tablet with M2 chip', 1099.99, 3, 'ipadpro.jpg', 35, 1],
-            ['Surface Pro 9', 'Versatile 2-in-1 tablet', 999.99, 3, 'surfacepro.jpg', 40, 0],
-            ['AirPods Pro 2', 'Wireless earbuds with noise cancellation', 249.99, 4, 'airpodspro.jpg', 100, 0],
-            ['Magic Mouse', 'Wireless mouse for Mac', 79.99, 4, 'magicmouse.jpg', 80, 0],
-            ['PlayStation 5', 'Next-gen gaming console', 499.99, 5, 'ps5.jpg', 15, 1],
-            ['Xbox Series X', 'Powerful gaming console', 499.99, 5, 'xboxseriesx.jpg', 18, 1],
-            ['Nintendo Switch', 'Portable gaming console', 299.99, 5, 'switch.jpg', 45, 0],
-            ['Gaming Headset', 'Professional gaming headset', 149.99, 5, 'headset.jpg', 60, 0],
-            ['Wireless Charger', 'Fast wireless charging pad', 39.99, 4, 'charger.jpg', 120, 0],
-            ['USB-C Hub', 'Multi-port USB-C hub', 69.99, 4, 'usbhub.jpg', 75, 0],
-            ['Bluetooth Speaker', 'Portable Bluetooth speaker', 129.99, 4, 'speaker.jpg', 55, 0]
-        ];
-        
-        foreach ($products as $product) {
-            $this->query("INSERT INTO products (name, description, price, category_id, image, stock_quantity, featured) VALUES (?, ?, ?, ?, ?, ?, ?)", $product);
-        }
-        
-        // Insert company info
-        $this->query("INSERT INTO company_info (name, address, phone, email, website, about) VALUES (?, ?, ?, ?, ?, ?)", [
-            'TechStore Pro',
-            '123 Tech Avenue, Silicon Valley, CA 94025',
-            '+1 (555) 123-4567',
-            'contact@techstorepro.com',
-            'https://techstorepro.com',
-            'Your trusted partner for the latest technology products. We offer high-quality electronics, competitive prices, and exceptional customer service.'
-        ]);
+        return self::$instance;
     }
     
     public function getConnection() {
         return $this->connection;
     }
     
-    public function query($sql, $params = []) {
+    public function fetchAll($sql, $params = []) {
         $stmt = $this->connection->prepare($sql);
         $stmt->execute($params);
-        return $stmt;
-    }
-    
-    public function fetchAll($sql, $params = []) {
-        return $this->query($sql, $params)->fetchAll();
+        return $stmt->fetchAll();
     }
     
     public function fetch($sql, $params = []) {
-        return $this->query($sql, $params)->fetch();
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch();
+    }
+    
+    public function execute($sql, $params = []) {
+        $stmt = $this->connection->prepare($sql);
+        return $stmt->execute($params);
     }
     
     public function lastInsertId() {
         return $this->connection->lastInsertId();
+    }
+    
+    // Admin-specific methods
+    public function getDashboardStats() {
+        $stats = [];
+        
+        // Total products
+        $result = $this->fetch("SELECT COUNT(*) as count FROM products");
+        $stats['total_products'] = $result['count'];
+        
+        // Total orders
+        $result = $this->fetch("SELECT COUNT(*) as count FROM orders");
+        $stats['total_orders'] = $result['count'];
+        
+        // Total revenue
+        $result = $this->fetch("SELECT SUM(total_amount) as total FROM orders");
+        $stats['total_revenue'] = $result['total'] ?? 0;
+        
+        // Recent orders count (last 30 days)
+        $result = $this->fetch("SELECT COUNT(*) as count FROM orders WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+        $stats['recent_orders'] = $result['count'];
+        
+        // Products by category
+        $stats['products_by_category'] = $this->fetchAll("
+            SELECT c.name, COUNT(p.id) as count 
+            FROM categories c 
+            LEFT JOIN products p ON c.id = p.category_id 
+            GROUP BY c.id, c.name
+        ");
+        
+        // Recent orders
+        $stats['recent_orders_list'] = $this->fetchAll("
+            SELECT * FROM orders 
+            ORDER BY created_at DESC 
+            LIMIT 10
+        ");
+        
+        return $stats;
+    }
+    
+    public function getProductsPaginated($page = 1, $perPage = 20, $search = '') {
+        $offset = ($page - 1) * $perPage;
+        
+        $whereClause = '';
+        $params = [];
+        
+        if (!empty($search)) {
+            $whereClause = "WHERE p.name LIKE ? OR p.description LIKE ?";
+            $params = ["%$search%", "%$search%"];
+        }
+        
+        // Get total count
+        $countSql = "SELECT COUNT(*) as total FROM products p $whereClause";
+        $totalResult = $this->fetch($countSql, $params);
+        $total = $totalResult['total'];
+        
+        // Get products
+        $sql = "SELECT p.*, c.name as category_name 
+                FROM products p 
+                LEFT JOIN categories c ON p.category_id = c.id 
+                $whereClause
+                ORDER BY p.created_at DESC 
+                LIMIT $perPage OFFSET $offset";
+        
+        $products = $this->fetchAll($sql, $params);
+        
+        return [
+            'data' => $products,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'total_pages' => ceil($total / $perPage)
+        ];
+    }
+    
+    public function getOrdersPaginated($page = 1, $perPage = 20, $status = '') {
+        $offset = ($page - 1) * $perPage;
+        
+        $whereClause = '';
+        $params = [];
+        
+        if (!empty($status)) {
+            $whereClause = "WHERE status = ?";
+            $params = [$status];
+        }
+        
+        // Get total count
+        $countSql = "SELECT COUNT(*) as total FROM orders $whereClause";
+        $totalResult = $this->fetch($countSql, $params);
+        $total = $totalResult['total'];
+        
+        // Get orders
+        $sql = "SELECT * FROM orders 
+                $whereClause
+                ORDER BY created_at DESC 
+                LIMIT $perPage OFFSET $offset";
+        
+        $orders = $this->fetchAll($sql, $params);
+        
+        return [
+            'data' => $orders,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'total_pages' => ceil($total / $perPage)
+        ];
+    }
+    
+    public function getOrderItems($orderId) {
+        return $this->fetchAll("
+            SELECT oi.*, p.name as product_name, p.image
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+        ", [$orderId]);
     }
 }
 ?>
