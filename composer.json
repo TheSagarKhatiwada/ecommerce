@@ -1,0 +1,32 @@
+{
+    "name": "techstore/ecommerce-website",
+    "description": "A mobile-first eCommerce website built with PHP, MySQL, and Bootstrap 5",
+    "type": "project",
+    "keywords": ["ecommerce", "php", "mysql", "bootstrap", "shopping-cart"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "TechStore Pro",
+            "email": "contact@techstorepro.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "autoload": {
+        "files": [
+            "config/config.php",
+            "includes/classes.php"
+        ]
+    },
+    "scripts": {
+        "setup": "php setup.php",
+        "post-install-cmd": [
+            "echo 'Run: composer setup to initialize the database'"
+        ]
+    },
+    "config": {
+        "preferred-install": "dist",
+        "sort-packages": true
+    }
+}
